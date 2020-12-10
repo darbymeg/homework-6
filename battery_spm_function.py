@@ -31,7 +31,7 @@ def residual(t, SV, pars, ptr, flags):
     # Total species energy: h + z_k*F*Phi
     energy_k = h_k + np.array([0, 0, -F*SV[ptr.phi_an]])
 
-    # 1/distance betwen center of anode and center of separator
+    # 1/distance between center of anode and center of separator
     dyInv_an = 1/(0.5*pars.H_an + 0.5*pars.H_elyte)
     # Volume-weighted thermal conductivity between center of anode and center 
     # of separator 
@@ -44,15 +44,17 @@ def residual(t, SV, pars, ptr, flags):
     CALCULATE TERMS FOR VOLUMETRIC THERMAL ENERGY PRODUCTION (W/m3)
     """
     # Conduction heat transfer from the anode to the electrolyte separator:
-    Q_cond_an = 0
+        
+    Q_cond_an = -lambda_an*(SV[ptr.T_elyte]-SV[ptr.T_an])*dyInv_an
 
     # Volumetric heat source/sink terms: (W/m3)
-    Q_rxn = 0
-    Q_ohm_el = 0
-    Q_ohm_io = 0
-    Q_cond = 0
-    Q_rad = 0
-    Q_conv = 0
+    #for all Q_xx, solving for form after divided by rho*Vol*cp
+    Q_rxn = -np.dot(sdot_k,energy_k)  #just interface rxns (chem & elec)
+    Q_ohm_el = pars.i_ext**2*pars.R_el_an
+    Q_ohm_io = pars.i_ext**2*pars.R_io_an
+    Q_cond = -Q_cond_an/pars.H_an                 #cond leaving anode, so neg       
+    Q_rad = pars.emmissivity*sigma*(pars.T_amb**4 - SV[ptr.T_an]**4)*pars.A_ext
+    Q_conv = pars.h_conv*pars.A_ext*(pars.T_amb-SV[ptr.T_an])
     """
     END CODING
     """
@@ -76,15 +78,15 @@ def residual(t, SV, pars, ptr, flags):
     CALCULATE TERMS FOR VOLUMETRIC THERMAL ENERGY PRODUCTION (W/m3)
     """
     # Conduction heat transfer from the electrolyte separator to the cathode:
-    Q_cond_ca = 0
+    Q_cond_ca = -lambda_ca*(SV[ptr.T_ca]-SV[ptr.T_an])*dyInv_ca
 
     # Volumetric heat source/sink terms: (W/m3)
-    Q_rxn = 0
-    Q_ohm_el = 0
-    Q_ohm_io = 0
-    Q_cond = 0
-    Q_rad = 0
-    Q_conv = 0
+    Q_rxn = 0                    #no rxn in separator     
+    Q_ohm_el = 0                 #no electronic resistance in elyte
+    Q_ohm_io = pars.i_ext**2*pars.R_io_elyte 
+    Q_cond = (Q_cond_an - Q_cond_ca)/pars.H_elyte    #an enters sep, ca exits sep 
+    Q_rad = 0                    #rad heat xfr only bdy phenomena
+    Q_conv = 0                   #conv heat xfr only bdy phenomena
     """
     END CODING
     """
@@ -119,12 +121,12 @@ def residual(t, SV, pars, ptr, flags):
     
     CALCULATE TERMS FOR VOLUMETRIC THERMAL ENERGY PRODUCTION (W/m3)
     """
-    Q_rxn = 0
-    Q_ohm_el = 0
-    Q_ohm_io = 0
-    Q_cond = 0
-    Q_rad = 0
-    Q_conv = 0
+    Q_rxn = -np.dot(sdot_k,energy_k)  #just interface rxns (chem & elec)
+    Q_ohm_el = pars.i_ext**2*pars.R_el_ca
+    Q_ohm_io = pars.i_ext**2*pars.R_io_ca
+    Q_cond = Q_cond_ca/pars.H_ca             #enters ca, no q_cond exit
+    Q_rad = pars.emmissivity*sigma*(pars.T_amb**4 - SV[ptr.T_ca]**4)*pars.A_ext
+    Q_conv = pars.h_conv*pars.A_ext*(pars.T_amb-SV[ptr.T_ca])
     """
     END CODING
     """
